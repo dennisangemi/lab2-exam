@@ -1,10 +1,10 @@
-```matlab
+```matlab:Code
 % cleaning environment
 clc
 clear all
 ```
 
-```matlab
+```matlab:Code
 % importing data
 df1 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj9jzisyRf7N_LQ4I4pW6F1-crvknL2diNhYowfQI-BnnuvBbyuJh1FurJZ_X3Q5_5/pub?gid=999031192&single=true&output=csv")
 df2 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj9jzisyRf7N_LQ4I4pW6F1-crvknL2diNhYowfQI-BnnuvBbyuJh1FurJZ_X3Q5_5/pub?gid=0&single=true&output=csv")
@@ -12,7 +12,7 @@ df3 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj
 df4 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj9jzisyRf7N_LQ4I4pW6F1-crvknL2diNhYowfQI-BnnuvBbyuJh1FurJZ_X3Q5_5/pub?gid=245849005&single=true&output=csv")
 ```
 
-```matlab
+```matlab:Code
 % assegno lunghezza oggetto
 o = df1.value
 % calcolo p: distanza oggetto-lente
@@ -37,7 +37,7 @@ ylabel("dq")
 
 noto che l'ampiezza del semi intervallo diminuisce all'aumentare di p distanza oggetto lente
 
-```matlab
+```matlab:Code
 % esporto tabella per relazione (converto in testo e approssimo)
 [tp, tdp] = signum2str(p,dp);
 [tq, tdq] = signum2str(q,dq);
@@ -47,7 +47,7 @@ writetable(pq,"../data/pq.csv")
 
 # Determinazione diretta della distanza focale
 
-```matlab
+```matlab:Code
 % calcolo f mediante formula (2) scheda
 f = (p.*q)./(p+q);
 
@@ -72,7 +72,7 @@ table = array2table([tf tdf],"VariableNames",{'f','$\delta f$'})
 |9|"9.74"|"0.08"|
 |10|"9.77"|"0.09"|
 
-```matlab
+```matlab:Code
 writetable(table,"../data/fdirect.csv")
 
 % media di f
@@ -87,7 +87,7 @@ tfm = '9.7'
 tdfm = '0.1'
 ```
 
-```matlab
+```matlab:Code
 % rappresento f con le incertezze
 fig=figure;
 errorbar(p,f,df,df,dp,dp,'o')
@@ -110,7 +110,7 @@ linearizzo l'equazione
 
 verificare la propagazione degli errori del reciproco. Mi sembra strano si riduca così.
 
-```matlab
+```matlab:Code
 % linearizzo equazione
 y  = 1./q;
 dy = usiground(dq./q.^2); % equivalente a (dq./q).*y
@@ -133,7 +133,7 @@ ylabel("y=1/p [cm]")
 grid on
 ```
 
-```matlab
+```matlab:Code
 % coefficiente di bravais pearson
 
 % funzione personale
@@ -149,7 +149,7 @@ A seguito del calcolo del coefficiente di Bravais-Pearson e del p-value (probabi
 
 # Best-fit: metodo dei minimi quadrati
 
-```matlab
+```matlab:Code
 % fare: bestfit
 [a, sigma_a, b, sigma_b] = best_fit_mmq(x,y,true)
 ```
@@ -161,7 +161,7 @@ b = -0.8600
 sigma_b = 0.0300
 ```
 
-```matlab
+```matlab:Code
 yfit1 = a+b.*x;
 figure;
 subplot(1,2,1)
@@ -187,7 +187,7 @@ legend("best-fit line","data")
 
 osserve che gli errori sulla y non sono costanti quindi è necessario fare il best fit pesato.
 
-```matlab
+```matlab:Code
 [a2, sigma_a2, b2, sigma_b2] = weighted_best_fit_mmq(x,y,dy,false)
 ```
 
@@ -198,7 +198,7 @@ b2 = -0.8638
 sigma_b2 = 0.0654
 ```
 
-```matlab
+```matlab:Code
 yfit2 = a2+b2.*x;
 figure;
 subplot(1,2,1)
@@ -220,7 +220,7 @@ legend("best-fit line","data")
 
 ![figure_2.png](README_images/figure_2.png)
 
-```matlab
+```matlab:Code
 % round
 [ta2, tsigma_a2] = signum2str(a2,sigma_a2)
 ```
@@ -230,7 +230,7 @@ ta2 = '0.094'
 tsigma_a2 = '0.005'
 ```
 
-```matlab
+```matlab:Code
 [tb2, tsigma_b2] = signum2str(b2,sigma_b2)
 ```
 
@@ -239,7 +239,7 @@ tb2 = '-0.86'
 tsigma_b2 = '0.07'
 ```
 
-```matlab
+```matlab:Code
 % test best-fit integrato in matlab
 figure
 plot(x,y,'.');
@@ -252,7 +252,7 @@ plot(cf,'fit',0.95);
 
 ![figure_3.png](README_images/figure_3.png)
 
-```matlab
+```matlab:Code
 % chi-quadro per un fit (sia pesato che non pesato)
 chi1=fitchisquarered(y,dy,yfit1,2)
 ```
@@ -261,7 +261,7 @@ chi1=fitchisquarered(y,dy,yfit1,2)
 chi1 = 0.6705
 ```
 
-```matlab
+```matlab:Code
 chi2=fitchisquarered(y,dy,yfit2,2)
 ```
 
@@ -269,7 +269,7 @@ chi2=fitchisquarered(y,dy,yfit2,2)
 chi2 = 0.2169
 ```
 
-```matlab
+```matlab:Code
 
 % fare: calcolare incertezza fmmq
 fmmq = 1/a;
@@ -278,7 +278,7 @@ dfmmq = sigma_a./a.^2;
 
 verificare che l'incertezza nel reciproco si propaga in questo modo
 
-```matlab
+```matlab:Code
 [fmmq, dfmmq] = siground(fmmq, dfmmq)
 ```
 
@@ -287,7 +287,7 @@ fmmq = 10.8000
 dfmmq = 0.2000
 ```
 
-```matlab
+```matlab:Code
 fmmq2 = 1./a2;
 dfmmq2 = sigma_a2./a2.^2;
 [fmmq2, dfmmq2] = siground(fmmq2, dfmmq2)
@@ -300,19 +300,19 @@ dfmmq2 = 0.5000
 
 # Metodo di Bessel
 
-```matlab
+```matlab:Code
 
 ```
 
 # Ingrandimento
 
-```matlab
+```matlab:Code
 
 ```
 
 # Conclusioni e confronti
 
-```matlab
+```matlab:Code
 % costruisco dataset delle f ottenute con diversi metodi
 fs = [fm; fmmq; fmmq2];
 dfs = [dfm; dfmmq; dfmmq2];
@@ -326,13 +326,20 @@ ylim([8 12])
 
 ![figure_4.png](README_images/figure_4.png)
 
-```matlab
+```matlab:Code
 % fare: Confrontare il valore di m dato dal rapporto q/p con il valore dedotto dalla misura diretta di i e o.
+```
+
+```matlab:Code
+% exporting mlx2m
+mlxloc = fullfile(pwd,'analysis.mlx');
+fileout = 'analysis.m';
+matlab.internal.liveeditor.openAndConvert(mlxloc,fileout);
 ```
 
 # Functions
 
-```matlab
+```matlab:Code
 function r = bravpear(x,y)
     % coefficiente di Bravais-Pearson
     r = sum((x - repelem(mean(x),length(x),1))  .*  (y - repelem(mean(y),length(y),1))) ./ (  sqrt(sum((x - repelem(mean(x),length(x),1)).^2) .* sum((y - repelem(mean(y),length(y),1)).^2))  );
