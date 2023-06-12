@@ -35,7 +35,7 @@ ylabel("dq")
 % esporto tabella per relazione (converto in testo e approssimo)
 [tp, tdp] = signum2str(p,dp);
 [tq, tdq] = signum2str(q,dq);
-pq = array2table([tp, tdp, tq, tdq],"VariableNames",{'p','\delta p','q','\delta q'})
+pq = array2table([tp, tdp, tq, tdq],"VariableNames",{'p','$\delta p$','q','$\delta q$'})
 writetable(pq,"../data/pq.csv")
 %% Determinazione diretta della distanza focale
 
@@ -59,7 +59,7 @@ dfm = mean(df);
 fig=figure;
 errorbar(p,f,df,df,dp,dp,'o')
 hold on
-plot([10:16],repelem(fm,length([10:16])),'Color','#D95319')
+plot(10:16,repelem(fm,length(10:16)),'Color','#D95319')
 hold off
 ylim([9 10])
 xlim([11 16])
@@ -75,7 +75,7 @@ saveas(fig,"../img/pf.png")
 
 % linearizzo equazione
 y  = 1./q;
-dy = usiground(dq./q.^2); % equivalente a (dq./q).*y
+dy = usiground(dq./q.^2);
 x  = 1./p;
 dx = usiground(dp./p.^2);
 
@@ -99,8 +99,8 @@ grid on
 % funzione personale
 r1 = abs(bravpear(x,y))
 % funzione matlab
-[r2, pval] = corr(x,y)
-pval < 0.01
+%[r2, pval] = corr(x,y)
+%pval < 0.01
 %% 
 % in questo modo ho comunque verificato che la funzione corr() torna esattamente 
 % il valore voluto ovvero quello della funzione bravpear() che corrisponde alla 
@@ -115,6 +115,7 @@ pval < 0.01
 % fare: bestfit
 [a, sigma_a, b, sigma_b] = best_fit_mmq(x,y,true)
 yfit1 = a+b.*x;
+
 figure;
 subplot(1,2,1)
 plot(x,yfit1,'Color','#D95319')
@@ -172,7 +173,7 @@ plot(cf,'fit',0.95);
 chi1=fitchisquarered(y,dy,yfit1,2)
 chi2=fitchisquarered(y,dy,yfit2,2)
 
-% fare: calcolare incertezza fmmq
+% calcolare incertezza fmmq
 fmmq = 1/a;
 dfmmq = sigma_a./a.^2;
 %% 
@@ -182,11 +183,105 @@ dfmmq = sigma_a./a.^2;
 fmmq2 = 1./a2;
 dfmmq2 = sigma_a2./a2.^2;
 [fmmq2, dfmmq2] = siground(fmmq2, dfmmq2)
+%% Ingrandimento 
+
+l_oggetto = df1.value
+dlo = df1.uncertainty
+df2
+l_immagine = (df2.l_img_sup + df2.l_img_inf)./2
+%% 
+% assumo come incertezza sulla lunghezza dell'immagine il semi intervallo
+
+dli = abs(df2.l_img_sup - df2.l_img_inf)./2;
+
+% calcolo m come rapporto i/o
+m1 = l_immagine./l_oggetto;
+dm1 = sqrt((dli./l_oggetto).^2 + ((l_immagine.*dlo)./(l_oggetto.^2)));
+[m1, dm1] = siground(m1,dm1);
+
+tlinf = signum2str(df2.l_img_inf,df2.l_uncertainty);
+tlsup = signum2str(df2.l_img_sup,df2.l_uncertainty);
+
+% approssimo ed esporto tabella
+[tm1, tdm1] = signum2str(m1,dm1);
+[tli, tdli] = signum2str(l_immagine,dli);
+table = [tlinf tlsup tli, tdli, tm1, tdm1];
+table = array2table(table,"VariableNames",{'$l_{inf} \; [cm]$','$l_{sup} \; [cm]$','i [cm]','$\delta i \; [cm]$','$m_1$','$\delta m_1$'});
+% add measure id
+table.measure_id = df2.measure_id;
+% riordino colonne
+newColumnOrder = {'measure_id', '$l_{inf} \; [cm]$','$l_{sup} \; [cm]$','i [cm]','$\delta i \; [cm]$','$m_1$','$\delta m_1$'};
+table = table(:,newColumnOrder);
+% rinomino colonna
+table.Properties.VariableNames{'measure_id'} = 'Measure ID';
+writetable(table,"../data/mio.csv")
+
+% preview
+table
+%%
+
+% calcolo m come rapporto q/p
+m2 = q./p;
+dm2 = sqrt((dq./p).^2 + ((q.*dp)./(p.^2)));
+[m2, dm2] = siground(m2,dm2);
+
+% approssimo ed esporto
+[tm2, tdm2] = signum2str(m2,dm2);
+
+table = [tm1, tdm1, tm2, tdm2];
+table = array2table(table,"VariableNames",{'$m_1$','$\delta m_1$','$m_2$','$\delta m_2$'});
+% add measure id
+table.measure_id = df2.measure_id;
+% riordino colonne
+newColumnOrder = {'measure_id', '$m_1$','$\delta m_1$','$m_2$','$\delta m_2$'};
+table = table(:,newColumnOrder);
+% rinomino colonna
+table.Properties.VariableNames{'measure_id'} = 'Measure ID';
+% esporto
+writetable(table,"../data/ms.csv")
+
+% preview
+table
+
+% differenze
+[t_diff_m, t_error_diffm] = signum2str(abs(m2-m1),dm1+dm2);
+[diffm, error_diffm]
+
+% costruisco dataset per plot
+ms = [m1, m2];
+dms = [dm1, dm2];
+
+
+%%
+
+fig=figure;
+for i=1:10
+    subplot(2,5,i)
+    errorbar(1:2,ms(i,:)',dms(i,:)',dms(i,:)','o')
+    title(sprintf("C1M%i",i))
+    xlim([0 3])
+end
+
+saveas(fig,"../img/ms.png")
+%%
+
 %% Metodo di Bessel
 
+df3
+% distanza oggetto lente
+ol = abs(df3.x_oggetto - df3.x_lente)
+% distanza lente schermo
+ls = abs(df3.x_schermo - df3.x_lente)
+% errore sulle distanze
+dd = df3.x_uncertainty*2
+% media delle distanze oggeto lente e lente schermo
+olsm = mean([ol,ls])
+dolsm = mean(dd)
+% determino f
+fb = olsm/4
+% calcolo errore
 
-
-%% Ingrandimento
+%% Valutazione errori sistematici
 
 
 
@@ -252,7 +347,7 @@ function [x, dx] = siground(x,dx)
         % approssima misura
         x = round(x,n);
     else
-        disp("Vettori non ancora supportati del tutto. Da testare")
+        %disp("Vettori non ancora supportati del tutto. Da testare")
         scale_factor = power(10, n);
         dx = round(dx .* scale_factor) ./ scale_factor;
         x  = round(x .* scale_factor) ./ scale_factor;
