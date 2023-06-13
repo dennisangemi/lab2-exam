@@ -1,0 +1,54 @@
+measure_id & x_lente & x_schermo_inf & x_schermo_sup & l_img_inf & l_img_sup \tabularnewline
+C1M1 & 21.80 & 66.30 & 78.40 & 6.360 & 7.850 \tabularnewline
+C1M2 & 22.50 & 60.40 & 65.90 & 5.090 & 6.230 \tabularnewline
+C1M3 & 23.00 & 59.90 & 64.90 & 5.065 & 6.095 \tabularnewline
+C1M4 & 23.50 & 56.85 & 58.90 & 4.235 & 4.850 \tabularnewline
+C1M5 & 24.00 & 55.30 & 56.80 & 3.985 & 4.320 \tabularnewline
+C1M6 & 24.50 & 53.70 & 54.30 & 3.600 & 3.275 \tabularnewline
+C1M7 & 24.80 & 52.85 & 54.50 & 3.265 & 3.890 \tabularnewline
+C1M8 & 25.00 & 52.80 & 53.80 & 3.410 & 3.535 \tabularnewline
+C1M9 & 25.30 & 51.90 & 53.00 & 3.150 & 3.995 \tabularnewline
+C1M10 & 25.50 & 51.60 & 52.80 & 3.000 & 3.285 \tabularnewline
+
+
+\begin{longtable}[]{@{}lllll@{}}
+    \toprule
+    $conf$ & $x_l$ & $x_{s,inf}$ & $x_{s,sup}$ & $l_{inf}$ & $l_{sup}$ \tabularnewline
+    \midrule
+    \endhead
+    C1M1 & 21.80 & 66.30 & 78.40 & 6.360 & 7.850 \tabularnewline
+    C1M2 & 22.50 & 60.40 & 65.90 & 5.090 & 6.230 \tabularnewline
+    C1M3 & 23.00 & 59.90 & 64.90 & 5.065 & 6.095 \tabularnewline
+    C1M4 & 23.50 & 56.85 & 58.90 & 4.235 & 4.850 \tabularnewline
+    C1M5 & 24.00 & 55.30 & 56.80 & 3.985 & 4.320 \tabularnewline
+    C1M6 & 24.50 & 53.70 & 54.30 & 3.600 & 3.275 \tabularnewline
+    C1M7 & 24.80 & 52.85 & 54.50 & 3.265 & 3.890 \tabularnewline
+    C1M8 & 25.00 & 52.80 & 53.80 & 3.410 & 3.535 \tabularnewline
+    C1M9 & 25.30 & 51.90 & 53.00 & 3.150 & 3.995 \tabularnewline
+    C1M10 & 25.50 & 51.60 & 52.80 & 3.000 & 3.285 \tabularnewline
+    \bottomrule
+    \\
+    \caption{Dati grezzi configurazione 1}
+    \label{tab:dc1}
+\end{longtable}
+
+\begin{longtable}[]{@{}llllll@{}}
+    \toprule
+    $conf$ & $x_l$ & $x_{s,inf}$ & $x_{s,sup}$ & $l_{inf}$ & $l_{sup}$ \tabularnewline
+    \midrule
+    \endhead
+    C1M1 & 21.80 & 66.30 & 78.40 & 6.360 & 7.850 \tabularnewline
+    C1M2 & 22.50 & 60.40 & 65.90 & 5.090 & 6.230 \tabularnewline
+    C1M3 & 23.00 & 59.90 & 64.90 & 5.065 & 6.095 \tabularnewline
+    C1M4 & 23.50 & 56.85 & 58.90 & 4.235 & 4.850 \tabularnewline
+    C1M5 & 24.00 & 55.30 & 56.80 & 3.985 & 4.320 \tabularnewline
+    C1M6 & 24.50 & 53.70 & 54.30 & 3.600 & 3.275 \tabularnewline
+    C1M7 & 24.80 & 52.85 & 54.50 & 3.265 & 3.890 \tabularnewline
+    C1M8 & 25.00 & 52.80 & 53.80 & 3.410 & 3.535 \tabularnewline
+    C1M9 & 25.30 & 51.90 & 53.00 & 3.150 & 3.995 \tabularnewline
+    C1M10 & 25.50 & 51.60 & 52.80 & 3.000 & 3.285 \tabularnewline
+    \bottomrule
+    \label{tab:conf6}
+    \\
+    \caption{Configurazione 6}
+\end{longtable}
