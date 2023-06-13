@@ -1,7 +1,7 @@
 % cleaning environment
 clc
 clear all
-%%
+
 % importing data
 df1 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj9jzisyRf7N_LQ4I4pW6F1-crvknL2diNhYowfQI-BnnuvBbyuJh1FurJZ_X3Q5_5/pub?gid=999031192&single=true&output=csv")
 df2 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj9jzisyRf7N_LQ4I4pW6F1-crvknL2diNhYowfQI-BnnuvBbyuJh1FurJZ_X3Q5_5/pub?gid=0&single=true&output=csv")
@@ -47,8 +47,8 @@ df = sqrt((((q./(p+q)).^2).*dp).^2 + (((p./(p+q)).^2).*dq).^2);
 
 % esporto tabella con f e incertezze
 [tf, tdf] = signum2str(f,df);
-table = array2table([tf tdf],"VariableNames",{'f','$\delta f$'})
-writetable(table,"../data/fdirect.csv")
+T = array2table([tf tdf],"VariableNames",{'f','$\delta f$'})
+writetable(T,"../data/fdirect.csv")
 
 % media di f
 fm = mean(f);
@@ -139,6 +139,7 @@ legend("best-fit line","data")
 % il best fit pesato.
 
 [a2, sigma_a2, b2, sigma_b2] = weighted_best_fit_mmq(x,y,dy,false)
+
 yfit2 = a2+b2.*x;
 figure;
 subplot(1,2,1)
@@ -161,13 +162,13 @@ legend("best-fit line","data")
 [tb2, tsigma_b2] = signum2str(b2,sigma_b2)
 %%
 % test best-fit integrato in matlab
-figure
-plot(x,y,'.');
-ft = fittype('poly1');
-w = 1./dy.^2;
-cf = fit(x,y,ft,'Weight',w);
-hold on
-plot(cf,'fit',0.95);
+% figure
+% plot(x,y,'.');
+% ft = fittype('poly1');
+% w = 1./dy.^2;
+% cf = fit(x,y,ft,'Weight',w);
+% hold on
+% plot(cf,'fit',0.95);
 %%
 % chi-quadro per un fit (sia pesato che non pesato)
 chi1=fitchisquarered(y,dy,yfit1,2)
@@ -185,10 +186,9 @@ dfmmq2 = sigma_a2./a2.^2;
 [fmmq2, dfmmq2] = siground(fmmq2, dfmmq2)
 %% Ingrandimento 
 
-l_oggetto = df1.value
-dlo = df1.uncertainty
-df2
-l_immagine = (df2.l_img_sup + df2.l_img_inf)./2
+l_oggetto = df1.value;
+dlo = df1.uncertainty;
+l_immagine = (df2.l_img_sup + df2.l_img_inf)./2;
 %% 
 % assumo come incertezza sulla lunghezza dell'immagine il semi intervallo
 
@@ -196,63 +196,44 @@ dli = abs(df2.l_img_sup - df2.l_img_inf)./2;
 
 % calcolo m come rapporto i/o
 m1 = l_immagine./l_oggetto;
-dm1 = sqrt((dli./l_oggetto).^2 + ((l_immagine.*dlo)./(l_oggetto.^2)));
-[m1, dm1] = siground(m1,dm1);
+dm1 = sqrt( (dli./l_oggetto).^2 + ((l_immagine.*dlo)./(l_oggetto.^2)).^2 );
 
+% approssimo significativamente
+[m1, dm1] = siground(m1,dm1);
+[tm1, tdm1] = signum2str(m1,dm1);
+[tli, tdli] = signum2str(l_immagine,dli);
 tlinf = signum2str(df2.l_img_inf,df2.l_uncertainty);
 tlsup = signum2str(df2.l_img_sup,df2.l_uncertainty);
 
-% approssimo ed esporto tabella
-[tm1, tdm1] = signum2str(m1,dm1);
-[tli, tdli] = signum2str(l_immagine,dli);
-table = [tlinf tlsup tli, tdli, tm1, tdm1];
-table = array2table(table,"VariableNames",{'$l_{inf} \; [cm]$','$l_{sup} \; [cm]$','i [cm]','$\delta i \; [cm]$','$m_1$','$\delta m_1$'});
-% add measure id
-table.measure_id = df2.measure_id;
-% riordino colonne
-newColumnOrder = {'measure_id', '$l_{inf} \; [cm]$','$l_{sup} \; [cm]$','i [cm]','$\delta i \; [cm]$','$m_1$','$\delta m_1$'};
-table = table(:,newColumnOrder);
-% rinomino colonna
-table.Properties.VariableNames{'measure_id'} = 'Measure ID';
-writetable(table,"../data/mio.csv")
-
-% preview
-table
+% esporto tabella
+header = {'Measure ID', '$l_{inf} \; [cm]$','$l_{sup} \; [cm]$','i [cm]','$\delta i \; [cm]$','$m_1$','$\delta m_1$'};
+T=table(df2.measure_id,tlinf, tlsup, tli, tdli, tm1, tdm1,'VariableNames',header)
+writetable(T,"../data/mio.csv")
 %%
-
-% calcolo m come rapporto q/p
+% calcolo m come rapporto q/p e propago incertezza
 m2 = q./p;
-dm2 = sqrt((dq./p).^2 + ((q.*dp)./(p.^2)));
-[m2, dm2] = siground(m2,dm2);
+dm2 = sqrt( (dq./p).^2 + ((q.*dp)./(p.^2)).^2 );
 
-% approssimo ed esporto
+% approssimo sulla base del numero di cifre significative
+[m2, dm2] = siground(m2,dm2);
 [tm2, tdm2] = signum2str(m2,dm2);
 
-table = [tm1, tdm1, tm2, tdm2];
-table = array2table(table,"VariableNames",{'$m_1$','$\delta m_1$','$m_2$','$\delta m_2$'});
-% add measure id
-table.measure_id = df2.measure_id;
-% riordino colonne
-newColumnOrder = {'measure_id', '$m_1$','$\delta m_1$','$m_2$','$\delta m_2$'};
-table = table(:,newColumnOrder);
-% rinomino colonna
-table.Properties.VariableNames{'measure_id'} = 'Measure ID';
-% esporto
-writetable(table,"../data/ms.csv")
-
 % preview
-table
+table(df2.measure_id,tq,tp,tm2, tdm2,'VariableNames',{'Measure ID','q','p','$m_2$','$\delta m_2$'})
+%%
+% confronto i valori di m ottenuti tramite i due metodi
 
-% differenze
+% calcolo distanze
 [t_diff_m, t_error_diffm] = signum2str(abs(m2-m1),dm1+dm2);
-[diffm, error_diffm]
 
+% creo tabella da esportare
+headers = {'Measure ID', '$m_1$','$\delta m_1$','$m_2$','$\delta m_2$','$\Delta m$'};
+T = table(df2.measure_id,tm1, tdm1, tm2, tdm2, t_diff_m,'VariableNames',headers)
+writetable(T,"../data/ms.csv")
+%%
 % costruisco dataset per plot
 ms = [m1, m2];
 dms = [dm1, dm2];
-
-
-%%
 
 fig=figure;
 for i=1:10
@@ -262,42 +243,70 @@ for i=1:10
     xlim([0 3])
 end
 
-saveas(fig,"../img/ms.png")
-%%
-
+saveas(fig,"../img/ms_r.png")
 %% Metodo di Bessel
 
 df3
+
 % distanza oggetto lente
 ol = abs(df3.x_oggetto - df3.x_lente)
+
 % distanza lente schermo
 ls = abs(df3.x_schermo - df3.x_lente)
-% errore sulle distanze
-dd = df3.x_uncertainty*2
-% media delle distanze oggeto lente e lente schermo
-olsm = mean([ol,ls])
-dolsm = mean(dd)
-% determino f
-fb = olsm/4
-% calcolo errore
 
+% sopra sbaglio
+D_os = abs(df3.x_oggetto - df3.x_schermo)
+
+fb = D_os/4
+
+% calcolo errore
+dfb = (df3.x_uncertainty*2)/4
+
+% approssimo
+[fb, dfb] = siground(fb,dfb)
 %% Valutazione errori sistematici
 
+df4
 
+% calcolo punto medio distanza oggetto schermo
+pmos = (df4.x_oggetto + df4.x_schermo)/2;
 
+% calcolo s e d 
+% s: distanza pmos e prima posizione lente
+% d: distanza pmos e seconda posizione lente
+s = abs(df4.x_lente_1 - pmos);
+d = abs(df4.x_lente_2 - pmos);
+
+% propagazione errori
+ds = 2.*df4.x_uncertainty;
+
+% differenze
+eta = s-d
+
+figure;
+hist(eta)
+
+[eta_best, sigma_eta] = siground(mean(eta),std(eta))
+
+% converto in testo ed esporto tabella
+[tpmos,tds] = signum2str(pmos,ds);
+ts = signum2str(s,ds);
+td = signum2str(d,ds);
+teta = signum2str(eta,ds);
+
+T=table(df4.measure_id,tpmos,ts,td,teta,'VariableNames',{'Measure ID','$x_m$','s','d','$\eta$'})
+writetable(T,"../data/sd.csv")
 %% Conclusioni e confronti
 
 % costruisco dataset delle f ottenute con diversi metodi
-fs = [fm; fmmq; fmmq2];
-dfs = [dfm; dfmmq; dfmmq2];
+fs = [fm; fmmq; fmmq2; fb];
+dfs = [dfm; dfmmq; dfmmq2; dfb];
 
 % forse meglio rapprsentarli con colori diversi. Fare un fr con scatterplot
 figure;
 errorbar(1:length(fs),fs,dfs,dfs,'o')
 xlim([0.5 3.5])
 ylim([8 12])
-%%
-% fare: Confrontare il valore di m dato dal rapporto q/p con il valore dedotto dalla misura diretta di i e o.
 %%
 % exporting mlx2m
 mlxloc = fullfile(pwd,'analysis.mlx');
