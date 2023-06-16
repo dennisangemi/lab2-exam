@@ -1,7 +1,7 @@
 % cleaning environment
 clc
 clear all
-
+%%
 % importing data
 df1 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj9jzisyRf7N_LQ4I4pW6F1-crvknL2diNhYowfQI-BnnuvBbyuJh1FurJZ_X3Q5_5/pub?gid=999031192&single=true&output=csv")
 df2 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj9jzisyRf7N_LQ4I4pW6F1-crvknL2diNhYowfQI-BnnuvBbyuJh1FurJZ_X3Q5_5/pub?gid=0&single=true&output=csv")
@@ -10,20 +10,26 @@ df4 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj
 %%
 % assegno lunghezza oggetto
 o = df1.value
+
 % calcolo p: distanza oggetto-lente
-p = abs(df2.x_lente-df2.x_oggetto);
-dp = df2.x_uncertainty*2;
-df2.p = p;
-df2.dp = dp;
+p = abs(df2.x_lente - df2.x_oggetto);
+dp = df2.x_uncertainty.*2;
+
+% calcolo posizione immagine (media)
+xi  = abs(df2.x_schermo_sup + df2.x_schermo_inf)./2;     % posizione immagine
+dxi = abs(df2.x_schermo_sup - df2.x_schermo_inf)./2;     % incertezza su posizione immagine
 
 % calcolo q: distanza lente-immagine
-q_inf = abs(df2.x_lente - df2.x_schermo_inf);
-q_sup = abs(df2.x_lente - df2.x_schermo_sup);
-q = (q_inf+q_sup)/2;
-% l'incertezza sulla posizione dello schermo è data dal semi-intervallo entro il quale l'immagine appare ugualmente nitida
-dq = abs(df2.x_schermo_sup - df2.x_schermo_inf)/2;
-df2.q = q;
-df2.dq = dq;
+q   = abs(df2.x_lente - xi);                             % distanza lente-immagine
+dq  = sqrt(df2.x_uncertainty.^2 + dxi.^2);               % incertezza sulla distanza lente_immagine
+
+% old code
+% q_inf = abs(df2.x_lente - df2.x_schermo_inf);
+% q_sup = abs(df2.x_lente - df2.x_schermo_sup);
+% q = (q_inf+q_sup)/2;
+% dq = abs(df2.x_schermo_sup - df2.x_schermo_inf)/2;
+
+% preview
 
 plot(p,dq)
 xlabel("p")
@@ -32,40 +38,42 @@ ylabel("dq")
 % noto che l'ampiezza del semi intervallo diminuisce all'aumentare di p distanza 
 % oggetto lente
 
-% esporto tabella per relazione (converto in testo e approssimo)
-[tp, tdp] = signum2str(p,dp);
-[tq, tdq] = signum2str(q,dq);
-pq = array2table([tp, tdp, tq, tdq],"VariableNames",{'p','$\delta p$','q','$\delta q$'})
-writetable(pq,"../data/pq.csv")
+% preview
+[p dp q dq]
+
+% approssimo valori, uniformo cifre decimali, esporto tabella
+T = table(df2.measure_id,latexerror(p,dp), latexerror(q,dq),'VariableNames',{'Measure ID','$p \pm \delta p$','$q \pm \delta q$'})
+exportLatexTable(T,"../data/pq.tex")
 %% Determinazione diretta della distanza focale
 
 % calcolo f mediante formula (2) scheda
 f = (p.*q)./(p+q);
 
 % propagazione errore su f
-df = sqrt((((q./(p+q)).^2).*dp).^2 + (((p./(p+q)).^2).*dq).^2);
+df = sqrt( (((q./(p+q)).^2).*dp).^2 + (((p./(p+q)).^2).*dq).^2 );
 
-% esporto tabella con f e incertezze
-[tf, tdf] = signum2str(f,df);
-T = array2table([tf tdf],"VariableNames",{'f','$\delta f$'})
-writetable(T,"../data/fdirect.csv")
+% approssimo f e df
+[f, df] = siground(f,df)
+
+% esporto tabella con p,q,f
+T = table(df2.measure_id,latexerror(p,dp), latexerror(q,dq), latexerror(f,df),'VariableNames',{'Measure ID','$p \pm \delta p$','$q \pm \delta q$','$f_d \pm \delta f_d$'})
+exportLatexTable(T,"../data/pqfdirect.tex")
 
 % media di f
-fm = mean(f);
-dfm = mean(df);
-[fm, dfm] = siground(fm,dfm)
-[tfm, tdfm] = signum2str(fm,dfm)
+[fm, dfm] = siground(mean(f), mean(df))
+
 % rappresento f con le incertezze
 fig=figure;
-errorbar(p,f,df,df,dp,dp,'o')
+errorbar(p,f,df,df,'o')
 hold on
 plot(10:16,repelem(fm,length(10:16)),'Color','#D95319')
+area((10:16)',repelem(fm+dfm,length((10:16)))',fm-dfm,"FaceAlpha",0.2,"EdgeColor","none","LineStyle","none","ShowBaseLine","off")
 hold off
 ylim([9 10])
 xlim([11 16])
 xlabel("p [cm]")
 ylabel("f [cm]")
-legend("Misure di f","Media",'Location','southeast')
+legend("Misure di f","Media","Intervallo media",'Location','southeast')
 saveas(fig,"../img/pf.png")
 %% Significatività della correlazione lineare: indice di Bravais-Pearson
 % linearizzo l'equazione 
@@ -75,29 +83,31 @@ saveas(fig,"../img/pf.png")
 
 % linearizzo equazione
 y  = 1./q;
-dy = usiground(dq./q.^2);
+dy = dq./q.^2;
 x  = 1./p;
-dx = usiground(dp./p.^2);
+dx = dp./p.^2;
 
-% converto in testo per esportare tabella con corretto numero di cifre
-% significative
-[tx, tdx] = signum2str(x,dx);
-[ty, tdy] = signum2str(y,dy);
-linearize_text_data = array2table([tx tdx ty tdy],"VariableNames",["x","dx","y","dy"])
-% esporto in csv
-writetable(linearize_text_data,"../data/linearized.csv")
+% approssimazione
+% [x, dx] = siground(x,dx);
+% [y, dy] = siground(y,dy);
+
+% esporto tabella
+T=table(latexerror(x,dx), latexerror(y,dy),'VariableNames',{'$x \pm \delta x$','$y \delta y$'})
+exportLatexTable(T,"../data/linearized_data.tex")
 
 % plot
-figure;
+fig=figure;
 errorbar(x,y,dy,dy,dx,dx,'o')
 xlabel("x = 1/p [cm]")
-ylabel("y=1/p [cm]")
+ylabel("y = 1/q [cm]")
 grid on
+saveas(fig,"../img/scatter_linearized.png")
 %%
 % coefficiente di bravais pearson
 
 % funzione personale
 r1 = abs(bravpear(x,y))
+
 % funzione matlab
 %[r2, pval] = corr(x,y)
 %pval < 0.01
@@ -112,82 +122,92 @@ r1 = abs(bravpear(x,y))
 % altamente significativa in quanto pval = 6e-10 << 0.01 = 1%
 %% Best-fit: metodo dei minimi quadrati
 
-% fare: bestfit
-[a, sigma_a, b, sigma_b] = best_fit_mmq(x,y,true)
-yfit1 = a+b.*x;
+% best-fit non pesato
+[a1, sigma_a1, b1, sigma_b1] = best_fit_mmq(x,y,true)
+yfit1 = a1+b1.*x;
 
-figure;
-subplot(1,2,1)
-plot(x,yfit1,'Color','#D95319')
-title("Metodo minimi quadrati non pesato")
-%sprintf("best-fit line: y=(%.3f +- %.3f) + (%.2f+- %.2f) x",a,sigma_a,b,sigma_b)
-%sprintf("best-fit line: y = %.3f %.2f x",a,b)
-hold on
-scatter(x,y,'MarkerEdgeColor','#0072BD')
-hold off
-xlabel("x = 1/p [cm^{-1}]")
-ylabel("y=1/p [cm^{-1}]")
-subplot(1,2,2)
-plot(x,yfit1,'Color','#D95319')
-hold on
-errorbar(x,y,dy,dy,dx,dx,'o','Color','#0072BD')
-hold off
-xlabel("x = 1/p [cm^{-1}]")
-legend("best-fit line","data")
-%% 
-% osserve che gli errori sulla y non sono costanti quindi è necessario fare 
-% il best fit pesato.
-
-[a2, sigma_a2, b2, sigma_b2] = weighted_best_fit_mmq(x,y,dy,false)
-
+% best-fit pesato
+[a2, sigma_a2, b2, sigma_b2] = weighted_best_fit_mmq(x,y,dy,true);
 yfit2 = a2+b2.*x;
-figure;
-subplot(1,2,1)
-plot(x,yfit2,'Color','#D95319')
-title("Metodo minimi quadrati pesato")
-hold on
-scatter(x,y,'MarkerEdgeColor','#0072BD')
-hold off
-xlabel("x = 1/p [cm^{-1}]")
-ylabel("y=1/p [cm^{-1}]")
-subplot(1,2,2)
-plot(x,yfit2,'Color','#D95319')
-hold on
-errorbar(x,y,dy,dy,dx,dx,'o','Color','#0072BD')
-hold off
-xlabel("x = 1/p [cm^{-1}]")
-legend("best-fit line","data")
-% round
+
+% round text
 [ta2, tsigma_a2] = signum2str(a2,sigma_a2)
-[tb2, tsigma_b2] = signum2str(b2,sigma_b2)
+[tb2, tsigma_b2] = signum2str(b2,sigma_b2) 
+
+% plotto insieme
+fig = figure;
+plot(x,yfit1)
+hold on
+plot(x,yfit2)
+errorbar(x,y,dy,dy,dx,dx,'.','Color','#0072BD')
+hold off
+legend("fit non pesato", "fit pesato", "valori osservati")
+xlabel("x = 1/p [cm^{-1}]")
+ylabel("y = 1/q [cm^{-1}]")
+saveas(fig,"../img/fit.png")
 %%
 % test best-fit integrato in matlab
 % figure
 % plot(x,y,'.');
 % ft = fittype('poly1');
 % w = 1./dy.^2;
-% cf = fit(x,y,ft,'Weight',w);
+% latexerror = fit(x,y,ft,'Weight',w);
 % hold on
-% plot(cf,'fit',0.95);
+% plot(latexerror,'fit',0.95);
 %%
 % chi-quadro per un fit (sia pesato che non pesato)
-chi1=fitchisquarered(y,dy,yfit1,2)
-chi2=fitchisquarered(y,dy,yfit2,2)
+chi1 = fitchisquarered(y,dy,yfit1,2)
+chi2 = fitchisquarered(y,dy,yfit2,2)
 
 % calcolare incertezza fmmq
-fmmq = 1/a;
-dfmmq = sigma_a./a.^2;
+fmmq = 1/a1;
+dfmmq = sigma_a1./a1.^2;
 %% 
 % verificare che l'incertezza nel reciproco si propaga in questo modo
 
 [fmmq, dfmmq] = siground(fmmq, dfmmq)
+
 fmmq2 = 1./a2;
 dfmmq2 = sigma_a2./a2.^2;
 [fmmq2, dfmmq2] = siground(fmmq2, dfmmq2)
+%% Potenza lente
+
+% diottrie calcolate da fm
+[pi1, dpi1] = siground(100/fm, 100*dfm/(fm^2))
+
+% diottrie calcolate da bestfit
+pi2  = 100.*a2
+dpi2 = 100.*sigma_a2
+%%
+pi = [pi1; pi2];
+dpi = [dpi1; dpi2];
+
+% media pesata
+[mpi, dmpi] = weightedaverage(pi,dpi,true)
+
+formula = ["$\Pi_1 = \frac{100}{\bar{f}}$";"$\Pi_2 = 100 A_2$"];
+
+T=table((1:2)',formula,latexerror(pi,dpi),texreler(pi,dpi),'VariableNames',{'Metodo','Formula','$\Pi \pm \delta \Pi$','$\frac{\delta \Pi}{\Pi}$'})
+exportLatexTable(T,"../data/potenza-lente.tex")
+
+fig = figure;
+errorbar((1:2),pi,dpi,dpi,'o')
+hold on
+area((0:3)',repelem(mpi+dmpi,length((0:3)))',mpi-dmpi,"FaceAlpha",0.2,"EdgeColor","none","LineStyle","none","ShowBaseLine","off")
+hold off
+ylim([8 11.5])
+xlim([0 3])
+xticks(1:2)
+xlabel("Metodo")
+ylabel("\Pi  [m^-1]",'Interpreter','tex')
+title("Potenza \Pi della lente")
+legend("\Pi_i","Media pesata \Pi_i")
+saveas(fig,"../img/potenza-lente.png")
 %% Ingrandimento 
 
 l_oggetto = df1.value;
 dlo = df1.uncertainty;
+
 l_immagine = (df2.l_img_sup + df2.l_img_inf)./2;
 %% 
 % assumo come incertezza sulla lunghezza dell'immagine il semi intervallo
@@ -216,10 +236,9 @@ dm2 = sqrt( (dq./p).^2 + ((q.*dp)./(p.^2)).^2 );
 
 % approssimo sulla base del numero di cifre significative
 [m2, dm2] = siground(m2,dm2);
-[tm2, tdm2] = signum2str(m2,dm2);
 
 % preview
-table(df2.measure_id,tq,tp,tm2, tdm2,'VariableNames',{'Measure ID','q','p','$m_2$','$\delta m_2$'})
+% table(df2.measure_id,tq,tp,tm2, tdm2,'VariableNames',{'Measure ID','q','p','$m_2$','$\delta m_2$'})
 %%
 % confronto i valori di m ottenuti tramite i due metodi
 
@@ -227,8 +246,8 @@ table(df2.measure_id,tq,tp,tm2, tdm2,'VariableNames',{'Measure ID','q','p','$m_2
 [t_diff_m, t_error_diffm] = signum2str(abs(m2-m1),dm1+dm2);
 
 % creo tabella da esportare
-headers = {'Measure ID', '$m_1$','$\delta m_1$','$m_2$','$\delta m_2$','$\Delta m$'};
-T = table(df2.measure_id,tm1, tdm1, tm2, tdm2, t_diff_m,'VariableNames',headers)
+headers = {'Measure ID', '$m_1 \pm \delta m_1$','$m_2 \pm \delta m_2$','$\Delta m$'};
+T = table(df2.measure_id,latexerror(m1,dm1), latexerror(m2,dm2), t_diff_m,'VariableNames',headers)
 writetable(T,"../data/ms.csv")
 %%
 % costruisco dataset per plot
@@ -246,7 +265,8 @@ end
 saveas(fig,"../img/ms_r.png")
 %% Metodo di Bessel
 
-df3
+% si assume incertezza di 1 cm
+ub = df3.x_uncertainty.*2
 
 % distanza oggetto lente
 ol = abs(df3.x_oggetto - df3.x_lente)
@@ -260,7 +280,9 @@ D_os = abs(df3.x_oggetto - df3.x_schermo)
 fb = D_os/4
 
 % calcolo errore
-dfb = (df3.x_uncertainty*2)/4
+dfb = (ub*2)/4
+
+% incertezza troppo piccola
 
 % approssimo
 [fb, dfb] = siground(fb,dfb)
@@ -281,10 +303,13 @@ d = abs(df4.x_lente_2 - pmos);
 ds = 2.*df4.x_uncertainty;
 
 % differenze
-eta = s-d
+eta = s-d;
 
-figure;
+fig=figure;
 hist(eta)
+title("Distribuzione di \eta")
+xlabel("[cm]")
+saveas(fig,"../img/eta.png")
 
 [eta_best, sigma_eta] = siground(mean(eta),std(eta))
 
@@ -301,12 +326,31 @@ writetable(T,"../data/sd.csv")
 % costruisco dataset delle f ottenute con diversi metodi
 fs = [fm; fmmq; fmmq2; fb];
 dfs = [dfm; dfmmq; dfmmq2; dfb];
+method=(1:4)';
+description = {'media'; 'best fit non pesato';'best fit pesato'; 'bessel'};
+
+T=table(method, description, latexerror(fs,dfs), 'VariableNames',{'Metodo','Descrizione','$f \pm \delta f$'})
+writetable(T,"../data/fs.csv")
+
+% media pesata
+fws = [fm; fmmq2; fb];
+dfws = [dfm; dfmmq2; dfb];
+[fwa dfwa] = weightedaverage(fws,dfws,true)
 
 % forse meglio rapprsentarli con colori diversi. Fare un fr con scatterplot
-figure;
-errorbar(1:length(fs),fs,dfs,dfs,'o')
-xlim([0.5 3.5])
-ylim([8 12])
+fig=figure;
+errorbar(1:length(fs),fs,dfs,dfs,'.')
+hold on
+area([0:5]',repelem(fwa+dfwa,length([0:5]))',fwa-dfwa,"FaceAlpha",0.2,"EdgeColor","none","LineStyle","none","ShowBaseLine","off")
+hold off
+xlim([0.5 4.5])
+xticks(1:4)
+ylim([9 11.5])
+xlabel("Metodo")
+ylabel("f [cm]")
+title("Stima della distanza focale")
+legend("f_i","Media pesata di f_i",Location="southeast")
+saveas(fig,"../img/fs.png")
 %%
 % exporting mlx2m
 mlxloc = fullfile(pwd,'analysis.mlx');
@@ -458,7 +502,7 @@ end
 function [tx, tdx] = signum2str(x,dx)
     % fa la stessa cosa di signum2str(x,dx) ma opera su x e dx vettoriali
     % della stessa lunghezza
- 
+
     % calcola lunghezza x e dx
     if length(x) == length(dx)
         l = length(x);
@@ -487,4 +531,105 @@ end
 % chi quadro di un fit
 function chi = fitchisquarered(y,dy,yfit,params)
     chi = sum(((yfit-y)./dy).^2)./(length(y)-params);
+end
+
+% formatta valore \pm misura come latex
+% misura e errore devono essere stringhe
+function text = latexerror(misura,errore)
+    if isnumeric(misura) && isnumeric(errore)
+        [tmisura, terrore] = signum2str(misura,errore);
+        text = "$" + tmisura + " \pm " + terrore + "$";
+    else
+        if ischar(misura) && ischar(errore)
+            text = "$" + misura + " \pm " + errore + "$";
+        end
+    end
+end
+
+function exportLatexTable(tableData, fileName)
+    % Apri il file in modalità scrittura
+    fileID = fopen(fileName, 'w');
+    
+    % Ottieni il numero di colonne della tabella
+    numCols = size(tableData, 2);
+    
+    % Ottieni le intestazioni della tabella
+    headers = string(tableData.Properties.VariableNames);
+
+    % Scrivi l'intestazione della tabella LaTeX
+    fprintf(fileID, '\\begin{longtable}{@{}');
+    for i = 1:numCols
+        fprintf(fileID, 'l');
+    end
+    fprintf(fileID, '@{}}\n');
+    
+    % Scrivi l'intestazione delle colonne
+    fprintf(fileID, '\\toprule\n');
+    for i = 1:numCols
+        fprintf(fileID, '%s', headers(i));
+        if i < numCols
+            fprintf(fileID, ' & ');
+        else
+            fprintf(fileID, ' \\tabularnewline\n');
+        end
+    end
+    
+    % Scrivi la riga divisoria
+    fprintf(fileID, '\\midrule\n');
+    
+    % Scrivi i dati della tabella
+    for row = 1:size(tableData, 1)
+        for col = 1:numCols
+            % Sostituisci "data" con i valori effettivi della tabella
+            fprintf(fileID, '%s', string(table2cell(tableData(row, col))));
+            if col < numCols
+                fprintf(fileID, ' & ');
+            else
+                fprintf(fileID, ' \\tabularnewline\n');
+            end
+        end
+    end
+    
+    % Scrivi la riga finale della tabella LaTeX
+    fprintf(fileID, '\\bottomrule\n');
+    
+    % Scrivi etichetta e caption della tabella
+    fprintf(fileID, '\\label{tab:edithere}\n');
+    fprintf(fileID, '\\\\');
+    fprintf(fileID, '\n\\caption{edithere}\n');
+    fprintf(fileID, '\\end{longtable}\n');
+
+    % Chiudi il file
+    fclose(fileID);
+    
+    fprintf('Tabella LaTeX esportata correttamente nel file "%s".\n', fileName);
+end
+
+function e = texreler(measure,uncertainty)
+    e = round(100.*(uncertainty./measure),2);
+    e = string(e) + "\%";
+end
+
+function [e, de] = weightedaverage(measure, uncertainty,flag)
+    % input
+    % measure: vettore contenente le misure da mediare
+    % incertezza: vettore contenente le incertezze sulle misure
+    % flag: se true, allora approssima il risultato sulla base del numero
+    % di cifre significative dell'errore della media pesata.
+
+    % output
+    % e: media pesata
+    % de: errore sulla media
+    
+    % assegno pesi
+    w = 1./(uncertainty.^2);
+    
+    % calcolo media ed errore
+    e   = sum(w.*measure) ./ sum(w);
+    de  = sqrt(1./sum(w));
+
+    % approssima
+    if flag==true
+        [e, de] = siground(e,de);
+    end
 end
