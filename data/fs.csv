@@ -1,5 +1,6 @@
 Metodo,Descrizione,$f \pm \delta f$
-1,media,$9.70 \pm 0.03$
-2,best fit non pesato,$10.8 \pm 0.2$
-3,best fit pesato,$10.6 \pm 0.6$
-4,bessel,$10.08 \pm 0.05$
+1,"media",$9.70 \pm 0.03$
+2,"best-fit non pesato, non vincolato",$10.8 \pm 0.2$
+3,"best-fit pesato, non vincolato",$10.6 \pm 0.6$
+4,"best-fit pesato e vincolato",$9.70 \pm 0.02$
+5,"bessel",$10.08 \pm 0.05$

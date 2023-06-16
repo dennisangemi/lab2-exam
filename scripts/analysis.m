@@ -62,18 +62,21 @@ exportLatexTable(T,"../data/pqfdirect.tex")
 % media di f
 [fm, dfm] = siground(mean(f), mean(df))
 
+% media pesata di f
+[fmw, dfmw] = weightedaverage(f,df,true)
+
 % rappresento f con le incertezze
 fig=figure;
 errorbar(p,f,df,df,'o')
 hold on
-plot(10:16,repelem(fm,length(10:16)),'Color','#D95319')
-area((10:16)',repelem(fm+dfm,length((10:16)))',fm-dfm,"FaceAlpha",0.2,"EdgeColor","none","LineStyle","none","ShowBaseLine","off")
+plot(10:16,repelem(fmw,length(10:16)),'Color','#D95319')
+area((10:16)',repelem(fmw+dfmw,length((10:16)))',fmw-dfmw,"FaceAlpha",0.2,"EdgeColor","none","LineStyle","none","ShowBaseLine","off")
 hold off
 ylim([9 10])
 xlim([11 16])
 xlabel("p [cm]")
 ylabel("f [cm]")
-legend("Misure di f","Media","Intervallo media",'Location','southeast')
+legend("Misure di f","Media pesata","Intervallo media pesata",'Location','southeast')
 saveas(fig,"../img/pf.png")
 %% Significatività della correlazione lineare: indice di Bravais-Pearson
 % linearizzo l'equazione 
@@ -130,6 +133,11 @@ yfit1 = a1+b1.*x;
 [a2, sigma_a2, b2, sigma_b2] = weighted_best_fit_mmq(x,y,dy,true);
 yfit2 = a2+b2.*x;
 
+%best-fit pesato vincolato
+b3 = -1   % coefficiente angolare teorico
+[a3, sigma_a3] = weighted_constrained_b_best_fit_mmq(x,y,dy,b3,true)
+yfit3 = a3 + b3.*x;
+
 % round text
 [ta2, tsigma_a2] = signum2str(a2,sigma_a2)
 [tb2, tsigma_b2] = signum2str(b2,sigma_b2) 
@@ -139,9 +147,10 @@ fig = figure;
 plot(x,yfit1)
 hold on
 plot(x,yfit2)
+plot(x,yfit3)
 errorbar(x,y,dy,dy,dx,dx,'.','Color','#0072BD')
 hold off
-legend("fit non pesato", "fit pesato", "valori osservati")
+legend("fit non pesato", "fit pesato","fit pesato vincolato", "valori osservati")
 xlabel("x = 1/p [cm^{-1}]")
 ylabel("y = 1/q [cm^{-1}]")
 saveas(fig,"../img/fit.png")
@@ -158,6 +167,7 @@ saveas(fig,"../img/fit.png")
 % chi-quadro per un fit (sia pesato che non pesato)
 chi1 = fitchisquarered(y,dy,yfit1,2)
 chi2 = fitchisquarered(y,dy,yfit2,2)
+chi3 = fitchisquarered(y,dy,yfit3,2)
 
 % calcolare incertezza fmmq
 fmmq = 1/a1;
@@ -170,6 +180,10 @@ dfmmq = sigma_a1./a1.^2;
 fmmq2 = 1./a2;
 dfmmq2 = sigma_a2./a2.^2;
 [fmmq2, dfmmq2] = siground(fmmq2, dfmmq2)
+
+fmmq3 = 1./a3;
+dfmmq3 = sigma_a3./a3.^2;
+[fmmq3, dfmmq3] = siground(fmmq3, dfmmq3)
 %% Potenza lente
 
 % diottrie calcolate da fm
@@ -260,6 +274,7 @@ for i=1:10
     errorbar(1:2,ms(i,:)',dms(i,:)',dms(i,:)','o')
     title(sprintf("C1M%i",i))
     xlim([0 3])
+    xticks(1:2)
 end
 
 saveas(fig,"../img/ms_r.png")
@@ -324,8 +339,8 @@ writetable(T,"../data/sd.csv")
 %% Conclusioni e confronti
 
 % costruisco dataset delle f ottenute con diversi metodi
-fs = [fm; fmmq; fmmq2; fb];
-dfs = [dfm; dfmmq; dfmmq2; dfb];
+fs = [fmw; fmmq; fmmq2; fb];
+dfs = [dfmw; dfmmq; dfmmq2; dfb];
 method=(1:4)';
 description = {'media'; 'best fit non pesato';'best fit pesato'; 'bessel'};
 
@@ -335,7 +350,7 @@ writetable(T,"../data/fs.csv")
 % media pesata
 fws = [fm; fmmq2; fb];
 dfws = [dfm; dfmmq2; dfb];
-[fwa dfwa] = weightedaverage(fws,dfws,true)
+[fwa, dfwa] = weightedaverage(fws,dfws,true)
 
 % forse meglio rapprsentarli con colori diversi. Fare un fr con scatterplot
 fig=figure;
@@ -477,6 +492,21 @@ function [a, sigma_a, b, sigma_b] = weighted_best_fit_mmq(x,y,dy,f)
         a = siground(a,sigma_a);
         b = siground(b,sigma_b);
     end
+end
+
+function [a, sigma_a] = weighted_constrained_b_best_fit_mmq(x,y,dy,b,flag)
+    % numero punti
+    n = length(x);
+
+    % assegno pesi
+    w = 1./(dy.^2);
+    
+    % calcolo denominatore
+    d = sum(w);
+    
+    % calcolo intercetta e incertezza
+    a =  (sum(w.*y) - (sum(w.*x).*b))./d;
+    sigma_a = sqrt((sum(w.*((y - b.*x - a).^2))./(n-1))./d);
 end
 
 % approssima misura e incertezza allo stesso numero di cifre significative
