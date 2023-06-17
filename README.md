@@ -1,7 +1,7 @@
 # Physics lab 2 exam
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 
-Experimental data and report of physics lab 1 exam
+Experimental data and report of physics lab 2 exam
 
 17-06-2023
 
