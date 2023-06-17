@@ -112,8 +112,8 @@ saveas(fig,"../img/scatter_linearized.png")
 r1 = abs(bravpear(x,y))
 
 % funzione matlab
-%[r2, pval] = corr(x,y)
-%pval < 0.01
+[r2, pval] = corr(x,y)
+pval < 0.01
 %% 
 % in questo modo ho comunque verificato che la funzione corr() torna esattamente 
 % il valore voluto ovvero quello della funzione bravpear() che corrisponde alla 
@@ -153,6 +153,8 @@ hold off
 legend("fit non pesato", "fit pesato","fit pesato vincolato", "valori osservati")
 xlabel("x = 1/p [cm^{-1}]")
 ylabel("y = 1/q [cm^{-1}]")
+title("best-fit lineare")
+set(gca,'FontName','Times New Roman')
 saveas(fig,"../img/fit.png")
 %%
 % test best-fit integrato in matlab
@@ -168,6 +170,17 @@ saveas(fig,"../img/fit.png")
 chi1 = fitchisquarered(y,dy,yfit1,2)
 chi2 = fitchisquarered(y,dy,yfit2,2)
 chi3 = fitchisquarered(y,dy,yfit3,2)
+%%
+% tabella fit, parametri, chi
+a = [a1; a2; a3];
+sigma_a = [sigma_a1; sigma_a2; sigma_a3];
+b = [b1; b2; b3];
+sigma_b = [sigma_b1; sigma_b2; 0.1];
+chi = [chi1; chi2; chi3];
+
+T = table((1:3)',latexerror(a,sigma_a),latexerror(b,sigma_b),round(chi,2),'VariableNames',{'Fit','$A \pm \sigma_A$','$B \pm \sigma_B$','$\chi_{red}^2$'})
+exportLatexTable(T,"../data/ABfit.tex")
+%%
 
 % calcolare incertezza fmmq
 fmmq = 1/a1;
@@ -339,10 +352,10 @@ writetable(T,"../data/sd.csv")
 %% Conclusioni e confronti
 
 % costruisco dataset delle f ottenute con diversi metodi
-fs = [fmw; fmmq; fmmq2; fb];
-dfs = [dfmw; dfmmq; dfmmq2; dfb];
-method=(1:4)';
-description = {'media'; 'best fit non pesato';'best fit pesato'; 'bessel'};
+fs = [fmw; fmmq; fmmq2; fmmq3; fb];
+dfs = [dfmw; dfmmq; dfmmq2; dfmmq3; dfb];
+method=(1:5)';
+description = {'media'; 'best-fit non pesato, non vincolato';'best-fit pesato, non vincolato'; 'best-fit pesato e vincolato'; 'bessel'};
 
 T=table(method, description, latexerror(fs,dfs), 'VariableNames',{'Metodo','Descrizione','$f \pm \delta f$'})
 writetable(T,"../data/fs.csv")
@@ -359,13 +372,40 @@ hold on
 area([0:5]',repelem(fwa+dfwa,length([0:5]))',fwa-dfwa,"FaceAlpha",0.2,"EdgeColor","none","LineStyle","none","ShowBaseLine","off")
 hold off
 xlim([0.5 4.5])
-xticks(1:4)
+xticks(1:5)
 ylim([9 11.5])
 xlabel("Metodo")
 ylabel("f [cm]")
 title("Stima della distanza focale")
 legend("f_i","Media pesata di f_i",Location="southeast")
 saveas(fig,"../img/fs.png")
+%%
+% costruisco dataset delle f ottenute con diversi metodi
+fs = [fmw; fmmq3; fb];
+dfs = [dfmw; dfmmq3; dfb];
+method=(1:3)';
+description = {'media'; 'best-fit pesato e vincolato'; 'bessel'};
+
+T=table(method, description, latexerror(fs,dfs), 'VariableNames',{'Metodo','Descrizione','$f \pm \delta f$'})
+writetable(T,"../data/fs-cleaned.csv")
+
+% media pesata
+[fwa, dfwa] = weightedaverage(fs,dfs,true)
+
+% forse meglio rapprsentarli con colori diversi. Fare un fr con scatterplot
+fig=figure;
+errorbar(1:length(fs),fs,dfs,dfs,'.') 
+hold on
+area([0:4]',repelem(fwa+dfwa,length([0:4]))',fwa-dfwa,"FaceAlpha",0.2,"EdgeColor","none","LineStyle","none","ShowBaseLine","off")
+hold off
+ylim([9.25 10.3])
+xlim([0.5 3.5])
+xticks(1:3)
+xlabel("Metodo")
+ylabel("f [cm]")
+title("Stima della distanza focale")
+legend("f_i","Media pesata di f_i",Location="southeast")
+saveas(fig,"../img/fs-cleaned.png")
 %%
 % exporting mlx2m
 mlxloc = fullfile(pwd,'analysis.mlx');
