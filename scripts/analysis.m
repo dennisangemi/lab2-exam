@@ -5,7 +5,7 @@ clear all
 % importing data
 df1 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj9jzisyRf7N_LQ4I4pW6F1-crvknL2diNhYowfQI-BnnuvBbyuJh1FurJZ_X3Q5_5/pub?gid=999031192&single=true&output=csv")
 df2 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj9jzisyRf7N_LQ4I4pW6F1-crvknL2diNhYowfQI-BnnuvBbyuJh1FurJZ_X3Q5_5/pub?gid=0&single=true&output=csv")
-df3 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj9jzisyRf7N_LQ4I4pW6F1-crvknL2diNhYowfQI-BnnuvBbyuJh1FurJZ_X3Q5_5/pub?gid=905714583&single=true&output=csv")
+df3 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj9jzisyRf7N_LQ4I4pW6F1-crvknL2diNhYowfQI-BnnuvBbyuJh1FurJZ_X3Q5_5/pub?gid=371031841&single=true&output=csv")
 df4 = readtable("https://docs.google.com/spreadsheets/d/e/2PACX-1vQgTBH8O8poeZfj9jzisyRf7N_LQ4I4pW6F1-crvknL2diNhYowfQI-BnnuvBbyuJh1FurJZ_X3Q5_5/pub?gid=245849005&single=true&output=csv")
 %%
 % assegno lunghezza oggetto
@@ -181,50 +181,59 @@ chi = [chi1; chi2; chi3];
 T = table((1:3)',latexerror(a,sigma_a),latexerror(b,sigma_b),round(chi,2),'VariableNames',{'Fit','$A \pm \sigma_A$','$B \pm \sigma_B$','$\chi_{red}^2$'})
 exportLatexTable(T,"../data/ABfit.tex")
 %%
+% stimare f (fmmq) e incertezza 
+[fmmq, dfmmq] = siground(1./a,sigma_a./(a.^2))
 
-% calcolare incertezza fmmq
-fmmq = 1/a1;
-dfmmq = sigma_a1./a1.^2;
-%% 
-% verificare che l'incertezza nel reciproco si propaga in questo modo
+fmmq3 = fmmq(3);
+dfmmq3 = dfmmq(3);
+%% Metodo di Bessel
 
-[fmmq, dfmmq] = siground(fmmq, dfmmq)
+% si assume incertezza di 1 cm
+ub = df3.x_uncertainty.*2
 
-fmmq2 = 1./a2;
-dfmmq2 = sigma_a2./a2.^2;
-[fmmq2, dfmmq2] = siground(fmmq2, dfmmq2)
+% distanza oggetto lente
+ol = abs(df3.x_oggetto - df3.x_lente)
 
-fmmq3 = 1./a3;
-dfmmq3 = sigma_a3./a3.^2;
-[fmmq3, dfmmq3] = siground(fmmq3, dfmmq3)
+% distanza lente schermo
+ls = abs(df3.x_schermo - df3.x_lente)
+
+% distanza oggetto schermo
+D_os = abs(df3.x_oggetto - df3.x_schermo)
+udos = ub.*2;
+
+% stimo f da Bessel
+fb = D_os/4
+
+% calcolo errore
+dfb = (udos)/4
+
+% approssimo
+[fb, dfb] = siground(fb,dfb)
 %% Potenza lente
 
-% diottrie calcolate da fm
-[pi1, dpi1] = siground(100/fm, 100*dfm/(fm^2))
+fs = [fmw; fmmq3; fb];
+dfs = [dfmw; dfmmq3; dfb];
 
-% diottrie calcolate da bestfit
-pi2  = 100.*a2
-dpi2 = 100.*sigma_a2
+pi = 100./fs;
+dpi = 100.*dfs./(fs.^2);
+[pi, dpi] = siground(pi,dpi)
 %%
-pi = [pi1; pi2];
-dpi = [dpi1; dpi2];
-
 % media pesata
 [mpi, dmpi] = weightedaverage(pi,dpi,true)
 
-formula = ["$\Pi_1 = \frac{100}{\bar{f}}$";"$\Pi_2 = 100 A_2$"];
+formula = ["\ref{eq:}";"\ref{eq:}";"\ref{eq:}"];
 
-T=table((1:2)',formula,latexerror(pi,dpi),texreler(pi,dpi),'VariableNames',{'Metodo','Formula','$\Pi \pm \delta \Pi$','$\frac{\delta \Pi}{\Pi}$'})
+T=table((1:3)',formula,latexerror(pi,dpi),texreler(pi,dpi),'VariableNames',{'Metodo','Equazione','$\Pi \pm \delta \Pi$','$\frac{\delta \Pi}{\Pi}$'})
 exportLatexTable(T,"../data/potenza-lente.tex")
 
 fig = figure;
-errorbar((1:2),pi,dpi,dpi,'o')
+errorbar((1:3),pi,dpi,dpi,'o')
 hold on
-area((0:3)',repelem(mpi+dmpi,length((0:3)))',mpi-dmpi,"FaceAlpha",0.2,"EdgeColor","none","LineStyle","none","ShowBaseLine","off")
+area((0:4)',repelem(mpi+dmpi,length((0:4)))',mpi-dmpi,"FaceAlpha",0.2,"EdgeColor","none","LineStyle","none","ShowBaseLine","off")
 hold off
-ylim([8 11.5])
-xlim([0 3])
-xticks(1:2)
+ylim([9.95 10.5])
+xlim([0 4])
+xticks(1:3)
 xlabel("Metodo")
 ylabel("\Pi  [m^-1]",'Interpreter','tex')
 title("Potenza \Pi della lente")
@@ -291,35 +300,14 @@ for i=1:10
 end
 
 saveas(fig,"../img/ms_r.png")
-%% Metodo di Bessel
-
-% si assume incertezza di 1 cm
-ub = df3.x_uncertainty.*2
-
-% distanza oggetto lente
-ol = abs(df3.x_oggetto - df3.x_lente)
-
-% distanza lente schermo
-ls = abs(df3.x_schermo - df3.x_lente)
-
-% sopra sbaglio
-D_os = abs(df3.x_oggetto - df3.x_schermo)
-
-fb = D_os/4
-
-% calcolo errore
-dfb = (ub*2)/4
-
-% incertezza troppo piccola
-
-% approssimo
-[fb, dfb] = siground(fb,dfb)
+%% 
 %% Valutazione errori sistematici
 
 df4
 
 % calcolo punto medio distanza oggetto schermo
 pmos = (df4.x_oggetto + df4.x_schermo)/2;
+dpmos = df4.x_uncertainty./sqrt(2);
 
 % calcolo s e d 
 % s: distanza pmos e prima posizione lente
@@ -328,13 +316,14 @@ s = abs(df4.x_lente_1 - pmos);
 d = abs(df4.x_lente_2 - pmos);
 
 % propagazione errori
-ds = 2.*df4.x_uncertainty;
+ds = 1.5.*df4.x_uncertainty;
 
 % differenze
 eta = s-d;
+deta = ds.*sqrt(2);
 
 fig=figure;
-hist(eta)
+histfit(eta,5)
 title("Distribuzione di \eta")
 xlabel("[cm]")
 saveas(fig,"../img/eta.png")
@@ -345,67 +334,67 @@ saveas(fig,"../img/eta.png")
 [tpmos,tds] = signum2str(pmos,ds);
 ts = signum2str(s,ds);
 td = signum2str(d,ds);
-teta = signum2str(eta,ds);
+teta = signum2str(eta,deta);
 
 T=table(df4.measure_id,tpmos,ts,td,teta,'VariableNames',{'Measure ID','$x_m$','s','d','$\eta$'})
+exportLatexTable(T,"../data/sd.tex")
 writetable(T,"../data/sd.csv")
 %% Conclusioni e confronti
 
-% costruisco dataset delle f ottenute con diversi metodi
-fs = [fmw; fmmq; fmmq2; fmmq3; fb];
-dfs = [dfmw; dfmmq; dfmmq2; dfmmq3; dfb];
-method=(1:5)';
-description = {'media'; 'best-fit non pesato, non vincolato';'best-fit pesato, non vincolato'; 'best-fit pesato e vincolato'; 'bessel'};
-
-T=table(method, description, latexerror(fs,dfs), 'VariableNames',{'Metodo','Descrizione','$f \pm \delta f$'})
-writetable(T,"../data/fs.csv")
-
-% media pesata
-fws = [fm; fmmq2; fb];
-dfws = [dfm; dfmmq2; dfb];
-[fwa, dfwa] = weightedaverage(fws,dfws,true)
-
-% forse meglio rapprsentarli con colori diversi. Fare un fr con scatterplot
-fig=figure;
-errorbar(1:length(fs),fs,dfs,dfs,'.')
-hold on
-area([0:5]',repelem(fwa+dfwa,length([0:5]))',fwa-dfwa,"FaceAlpha",0.2,"EdgeColor","none","LineStyle","none","ShowBaseLine","off")
-hold off
-xlim([0.5 4.5])
-xticks(1:5)
-ylim([9 11.5])
-xlabel("Metodo")
-ylabel("f [cm]")
-title("Stima della distanza focale")
-legend("f_i","Media pesata di f_i",Location="southeast")
-saveas(fig,"../img/fs.png")
-%%
+% distanza focale
 % costruisco dataset delle f ottenute con diversi metodi
 fs = [fmw; fmmq3; fb];
 dfs = [dfmw; dfmmq3; dfb];
 method=(1:3)';
-description = {'media'; 'best-fit pesato e vincolato'; 'bessel'};
+description = {'media pesata'; 'best-fit pesato e vincolato'; 'bessel'};
 
 T=table(method, description, latexerror(fs,dfs), 'VariableNames',{'Metodo','Descrizione','$f \pm \delta f$'})
-writetable(T,"../data/fs-cleaned.csv")
+exportLatexTable(T,"../data/fs.tex")
 
 % media pesata
 [fwa, dfwa] = weightedaverage(fs,dfs,true)
 
 % forse meglio rapprsentarli con colori diversi. Fare un fr con scatterplot
 fig=figure;
-errorbar(1:length(fs),fs,dfs,dfs,'.') 
+errorbar(1:length(fs),fs,dfs,dfs,'o') 
 hold on
 area([0:4]',repelem(fwa+dfwa,length([0:4]))',fwa-dfwa,"FaceAlpha",0.2,"EdgeColor","none","LineStyle","none","ShowBaseLine","off")
 hold off
-ylim([9.25 10.3])
+ylim([9.4 10.1])
 xlim([0.5 3.5])
 xticks(1:3)
 xlabel("Metodo")
 ylabel("f [cm]")
-title("Stima della distanza focale")
+title("Stima della distanza focale f")
 legend("f_i","Media pesata di f_i",Location="southeast")
-saveas(fig,"../img/fs-cleaned.png")
+saveas(fig,"../img/fs.png")
+
+% aggiungo errore sistematico
+%dfs = sqrt(dfs.^2+eta_best.^2);
+
+dfs = dfs+eta_best;
+[fs, dfs] = siground(fs,dfs)
+% media pesata
+[fwa, dfwa] = weightedaverage(fs,dfs,true)
+
+fig=figure;
+errorbar(1:length(fs),fs,dfs,dfs,'o') 
+hold on
+area([0:4]',repelem(fwa+dfwa,length([0:4]))',fwa-dfwa,"FaceAlpha",0.2,"EdgeColor","none","LineStyle","none","ShowBaseLine","off")
+hold off
+ylim([5 12])
+xlim([0.5 3.5])
+xticks(1:3)
+xlabel("Metodo")
+ylabel("f [cm]")
+title("Stima della distanza focale f")
+legend("f_i","Media pesata di f_i",Location="southeast")
+saveas(fig,"../img/fs-sist.png")
+
+T=table(method, description, latexerror(fs,dfs), 'VariableNames',{'Metodo','Descrizione','$f \pm \Delta f$'})
+exportLatexTable(T,"../data/fs-sist.tex")
+
+% potenza
 %%
 % exporting mlx2m
 mlxloc = fullfile(pwd,'analysis.mlx');
