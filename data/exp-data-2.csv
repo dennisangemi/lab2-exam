@@ -1,2 +1,2 @@
-configuration,measure_id,x_proiettore,x_oggetto,x_lente,x_schermo,x_uncertainty,x_uom,x_tool,l_img,l_uncertainty,l_uom,l_tool
-2,C2M1,4.60,10.10,31.15,50.40,0.05,CMT,regolo,1.850,0.005,CMT,calibro
+configuration,measure_ID,x_oggetto,x_lente,x_schermo,x_uncertainty,x_uom
+2,C2M1,10.00,29.80,49.60,0.05,CMT
